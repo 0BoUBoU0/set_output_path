@@ -7,7 +7,7 @@ bl_info = {
     "warning": "",
     "category": "Render",
     "blender": (2, 90, 0),
-    "version": (2,0,43)
+    "version": (2,0,51)
 }
 
 
@@ -148,10 +148,11 @@ class RENDER_PT_setoutputpathfieldsoptions(bpy.types.Panel):
                 iter += 1
         # create buttons
         char_options_A = [
-            ("[Output Folder]", "Output Folder","FILE_FOLDER"),
+            ("[Output Folder]", "Output Folder","FILE_FOLDER"), 
             ("[Scene Name]", "Scene Name","SCENE_DATA"),
             ("[File Name]", "File Name","FILE"),
             ("[Camera Name]", "Camera Name","CAMERA_DATA"),
+            ("[Layer Name]", "Layer Name","RENDERLAYERS"),
             ("[File Version]", "File Version","LINENUMBERS_ON")
         ]
         sub_row = col2.row()
@@ -256,6 +257,7 @@ class RENDER_OT_setoutputpath(bpy.types.Operator):
                 scene.setoutputpath_props.scenes_selection = scene_ref.setoutputpath_props.scenes_selection
             output_path = scene.setoutputpath_props.output_path_previs
             output_split = output_path.split("**")
+            print(output_split)
             complete_filepath = ""
             for elem in output_split:
                 if elem == "[Output Folder]":
@@ -272,6 +274,8 @@ class RENDER_OT_setoutputpath(bpy.types.Operator):
                     elem = scene.name
                 elif elem == "[Camera Name]":
                     elem = scene.camera.name if scene.camera else ""
+                elif elem == "[Layer Name]":
+                    elem = bpy.context.view_layer.name
                 elif elem == "[Custom A]":
                     elem = scene.setoutputpath_props.output_customfield_a_prop
                 elif elem == "[Custom B]":
@@ -285,6 +289,14 @@ class RENDER_OT_setoutputpath(bpy.types.Operator):
                     else:
                         file_version = "v001"
                     elem = file_version
+
+                # allow user to use bpy. blablabla
+                if elem.startswith("bpy."):
+                    parts = elem.split(".")
+                    obj = bpy
+                    for part in parts[1:]:  # ignore "bpy"
+                        obj = getattr(obj, part)
+                    elem = obj
 
                 complete_filepath += elem
             # clean the filepath
