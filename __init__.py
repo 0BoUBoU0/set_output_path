@@ -7,7 +7,7 @@ bl_info = {
     "warning": "",
     "category": "Render",
     "blender": (2, 90, 0),
-    "version": (2,0,51)
+    "version": (2,1,21)
 }
 
 
@@ -46,10 +46,9 @@ snap_folder = "Snap_Files"
 class SOP_preferences(bpy.types.AddonPreferences):
     bl_idname = __name__
 
-    postscript_pref : bpy.props.BoolProperty(name="Add post-script", default=False, description = "")
     def draw(self, context):
         layout = self.layout
-        layout.prop(self, "postscript_pref")
+        pass
 
 # Create property group
 class RENDER_setoutputpathprop(bpy.types.PropertyGroup):
@@ -65,16 +64,19 @@ class RENDER_setoutputpathprop(bpy.types.PropertyGroup):
         default="CURRENT SCENE"
     )
 
-    output_customfield_a_prop: bpy.props.StringProperty(default="", name="", description='First user custom field (A)')
-    output_customfield_b_prop: bpy.props.StringProperty(default="", name="", description='Second user custom field (B)')
-    output_customfield_c_prop: bpy.props.StringProperty(default="", name="", description='Third user custom field (C)')
+    additional_fields = bpy.props.BoolProperty(name="",default=False,description="show more fields and options")
 
-    output_postscript_prop : bpy.props.PointerProperty (type=bpy.types.Text, name="", description="Third user custom field (From Script)")
-    output_postscript_checkbox_prop : bpy.props.BoolProperty (name="", default=True, description='if on, will launch a script after changing the render path')
+    output_customfield_a: bpy.props.StringProperty(default="", name="", description='First user custom field (A)')
+    output_customfield_b: bpy.props.StringProperty(default="", name="", description='Second user custom field (B)')
+    output_customfield_c: bpy.props.StringProperty(default="", name="", description='Third user custom field (C)')
+    output_customfield_d: bpy.props.StringProperty(default="", name="", description='Fourth user custom field (D)')
 
-    output_custom_filepath: bpy.props.StringProperty(default="//Output", name="Output Folder", description='Output folder filepath, the root where everything starts')
+    output_postscript : bpy.props.PointerProperty (type=bpy.types.Text, name="", description="Third user custom field (From Script)")
+    output_postscript_checkbox : bpy.props.BoolProperty (name="", default=False, description='if on, will launch a script after changing the render path')
+
+    output_custom_filepath: bpy.props.StringProperty(default="Output", name="Output Folder", description='Output folder filepath, the root where everything starts')
     output_path_previs: bpy.props.StringProperty(default="[Output Folder]**\\", name="Path previs", description='')
-    output_corresponding_prop : bpy.props.StringProperty(name="Translation",default="",description='translate field a to field b, separated by ",". I.E. "Image=rgba,Alpha=alpha" makes Images_Alpha becomes rgba_alpha')
+    output_corresponding : bpy.props.StringProperty(name="Translation",default="",description='translate field a to field b, separated by ",". I.E. "Image=rgba,Alpha=alpha" makes Images_Alpha becomes rgba_alpha')
 
     filepath_options = [("Absolute", "Absolute", "Absolute"), ("Relative", "Relative", "Relative")]
     filepath_selection: bpy.props.EnumProperty(
@@ -105,8 +107,6 @@ class RENDER_PT_setoutputpath(bpy.types.Panel):
         split = row.split(align=True, factor=0.85)
         split.operator('render.setoutputpath', text="Set Output Path", icon="FILE_FOLDER")
         split.prop(setoutputpath_props, "filepath_selection")
-        if bpy.context.preferences.addons[__name__].preferences.postscript_pref:
-            split.prop(setoutputpath_props, "output_postscript_checkbox_prop", icon='SYSTEM')
         
         box = layout.box()
         row = box.row()
@@ -114,97 +114,92 @@ class RENDER_PT_setoutputpath(bpy.types.Panel):
         split.label(icon="FOLDER_REDIRECT",text=f"Path: {output_pathprevis}")
         split.operator('sop.dellastcharacter', text="", icon="TRIA_LEFT_BAR")
 
+        # main options
+        row = box.row()
+        # col2 = row.column()
+        def ui_blocs(list):
+            iter = 0
+            for char,label,descr,icon, in list:
+                operator = row.operator('sop.add_character_enum', text=label,icon=icon)
+                operator.character = char
+                operator.tooltip = descr
+                iter += 1
+        # create buttons
+        char_options_A = [
+            ("[Output Folder]"," ", "insert Output Folder","FILE_FOLDER"), 
+            ("[Scene Name]"," ", "insert Scene Name","SCENE_DATA"),
+            ("[File Name]"," ", "insert File Name","FILE_BLEND"),
+            ("[Camera Name]"," ", "insert Camera Name","CAMERA_DATA"),
+            ("[Layer Name]"," ", "insert Layer Name","RENDERLAYERS"),
+            ("[File Version]"," ", "insert File Version (need addon called snapshot files)","LINENUMBERS_ON"),
+            ("[User]"," ","insert user's name","USER"),
+        ]
+        ui_blocs(char_options_A)
+
+        row.label(text="")
+
+        # separators
+        char_options_B = [
+            ("\\", "\\","insert backslash", "NONE"),
+            ("/", "/","insert slash", "NONE"),
+            ("_", "_","insert underscore","NONE"),
+            ("-", "-","insert dash","NONE"),
+            (".", ".","insert dot","NONE"),
+        ]
+        ui_blocs(char_options_B)
+
 # Create panel for field options
 class RENDER_PT_setoutputpathfieldsoptions(bpy.types.Panel):
-    bl_label = "Fields Options"
+    bl_label = "Advanced Options"
     bl_idname = "RENDER_PT_setoutputpathfieldsoptions"
     bl_region_type = "WINDOW"
     bl_space_type = "PROPERTIES"
     bl_context = 'output'
     bl_parent_id = "RENDER_PT_setoutputpath"
+    bl_options = {"DEFAULT_CLOSED"}
 
     def draw_header(self, context):
         layout = self.layout
-        layout.label(text="", icon='SMALL_CAPS')
+        layout.label(text="", icon='OPTIONS')
 
     def draw(self, context):
         setoutputpath_props = context.scene.setoutputpath_props
 
         layout = self.layout
-        box = layout.box()
-        row = box.row()
-        # add icon
-        col1 = row.column()
-        col1.alignment = 'CENTER'
-        col1.separator(factor=3)
-        col1.label(icon='TEXT')
-
-        # main options
-        col2 = row.column()
-        def ui_blocs(list):
-            iter = 0
-            for char, label,icon in list:
-                sub_row.operator('sop.add_character_enum', text=label, icon=icon).character = char
-                iter += 1
-        # create buttons
-        char_options_A = [
-            ("[Output Folder]", "Output Folder","FILE_FOLDER"), 
-            ("[Scene Name]", "Scene Name","SCENE_DATA"),
-            ("[File Name]", "File Name","FILE"),
-            ("[Camera Name]", "Camera Name","CAMERA_DATA"),
-            ("[Layer Name]", "Layer Name","RENDERLAYERS"),
-            ("[File Version]", "File Version","LINENUMBERS_ON")
-        ]
-        sub_row = col2.row()
-        ui_blocs(char_options_A)
-        # separators
-        char_options_B = [
-            ("\\", "Backlash \\","NONE"),
-            ("_", "Underscore _","NONE"),
-            ("-", "Dash -","NONE"),
-            (".", "Dot .","NONE"),
-        ]
-        sub_row = col2.row()
-        ui_blocs(char_options_B)
-        # customs
-        char_options_C = [
-            ("[Custom A]", "Custom A","NONE"),
-            ("[Custom B]", "Custom B","NONE"),
-            ("[Custom C]", "Custom C","NONE"),
-            #("[Custom From Script]", "Custom From Script","NONE"),
-        ]
-        sub_row = col2.row()
-        ui_blocs(char_options_C)
         
+        ### custom fields
         box = layout.box()
         row = box.row()
-        # # add icon
-        # col1 = row.column()
-        # col1.alignment = 'CENTER'
-        # col1.separator(factor=3)
-        # col1.label(icon='PREFERENCES')
+        row.label(text="Add custom fields:")
+        row = box.row()
+        split = row.split(factor=2/5)
+        split.operator('sop.add_character_enum', text="Custom A").character = "[Custom A]"
+        split.prop(setoutputpath_props, "output_customfield_a",text="" )
+        split = row.split(factor=2/5)
+        split.operator('sop.add_character_enum', text="Custom B").character = "[Custom B]"
+        split.prop(setoutputpath_props, "output_customfield_b",text="" )
+        row = box.row()
+        split = row.split(factor=2/5)
+        split.operator('sop.add_character_enum', text="Custom C").character = "[Custom C]"
+        split.prop(setoutputpath_props, "output_customfield_c",text="" )
+        split = row.split(factor=2/5)
+        split.operator('sop.add_character_enum', text="Custom D").character = "[Custom D]"
+        split.prop(setoutputpath_props, "output_customfield_d",text="" )
+
+        ### options
+        box = layout.box()
+        row = box.row()
 
         col2 = row.column()
-        col2.prop(setoutputpath_props, "output_custom_filepath")
+        col2.prop(setoutputpath_props, "output_custom_filepath",icon="FILE_FOLDER")
         row = col2.row()
-        col = row.column()
-        split = col.split(factor=2/5)
-        split.label(text="A Custom")
-        split.prop(setoutputpath_props, "output_customfield_a_prop")
-        col = row.column()
-        split = col.split(factor=2/5)
-        split.label(text="B Custom")
-        split.prop(setoutputpath_props, "output_customfield_b_prop")
-        col = row.column()
-        split = col.split(factor=2/5)
-        split.label(text="C Custom")
-        split.prop(setoutputpath_props, "output_customfield_c_prop")
-        bbox = box.box()
-        row = bbox.row()
-        row.prop(setoutputpath_props, "output_corresponding_prop")
-        if bpy.context.preferences.addons[__name__].preferences.postscript_pref:
-            row = bbox.row()
-            row.prop(setoutputpath_props, "output_postscript_prop", text="Post-Script")
+        row.prop(setoutputpath_props, "output_corresponding")
+
+        box = layout.box()
+        row = box.row()
+        box.active = setoutputpath_props.output_postscript_checkbox
+        row.prop(setoutputpath_props, "output_postscript_checkbox", icon='SYSTEM')
+        row.prop(setoutputpath_props, "output_postscript", text="Post-Script")
 
 
 # Operator for deleting the last character
@@ -223,10 +218,16 @@ class SOP_OT_dellastcharacter(bpy.types.Operator):
 class SOP_OT_add_character_enum(bpy.types.Operator):
     bl_idname = 'sop.add_character_enum'
     bl_label = "Add Character"
-    bl_description = "Adds a character or field to the path"
+    #bl_description = "Adds a character or field to the path"
     bl_options = {"REGISTER", "UNDO"}
 
     character: bpy.props.StringProperty()
+    tooltip: bpy.props.StringProperty()
+
+    ### add a class to add tooltip
+    @classmethod
+    def description(cls, context, properties):
+        return properties.tooltip
 
     def execute(self, context):
         context.scene.setoutputpath_props.output_path_previs += f"**{self.character}"
@@ -252,36 +253,40 @@ class RENDER_OT_setoutputpath(bpy.types.Operator):
             if scene_ref.setoutputpath_props.scenes_selection == "ALL SCENES WITH CURRENT SETTINGS":
                 scene.setoutputpath_props.output_path_previs = scene_ref.setoutputpath_props.output_path_previs
                 scene.setoutputpath_props.output_custom_filepath = scene_ref.setoutputpath_props.output_custom_filepath
-                scene.setoutputpath_props.output_customfield_a_prop = scene_ref.setoutputpath_props.output_customfield_a_prop
-                scene.setoutputpath_props.output_customfield_b_prop = scene_ref.setoutputpath_props.output_customfield_b_prop
+                scene.setoutputpath_props.output_customfield_a = scene_ref.setoutputpath_props.output_customfield_a
+                scene.setoutputpath_props.output_customfield_b = scene_ref.setoutputpath_props.output_customfield_b
                 scene.setoutputpath_props.scenes_selection = scene_ref.setoutputpath_props.scenes_selection
             output_path = scene.setoutputpath_props.output_path_previs
             output_split = output_path.split("**")
             print(output_split)
-            complete_filepath = ""
+            ## check if relative or absolute
+            if scene.setoutputpath_props.filepath_selection == "Relative":
+                complete_filepath = "//"
+            else:
+                complete_filepath = os.path.dirname(bpy.data.filepath)
+
+            ## add elements 
             for elem in output_split:
                 if elem == "[Output Folder]":
-                    if scene.setoutputpath_props.filepath_selection == "Relative":
-                        elem = f"//{scene.setoutputpath_props.output_custom_filepath}"
-                    else:
-                        filename = bpy.data.filepath.split("\\")[-1]
-                        filepath_abs = bpy.data.filepath.replace(filename, "")
-                        elem = f"{filepath_abs}{scene.setoutputpath_props.output_custom_filepath}"
-                    elem += "\\"
+                    elem = f"{scene.setoutputpath_props.output_custom_filepath}"
                 elif elem == "[File Name]":
-                    elem = bpy.data.filepath.split("\\")[-1].split(".")[0]
+                    elem = os.path.basename(bpy.data.filepath).split(".")[0]
                 elif elem == "[Scene Name]":
                     elem = scene.name
                 elif elem == "[Camera Name]":
                     elem = scene.camera.name if scene.camera else ""
                 elif elem == "[Layer Name]":
                     elem = bpy.context.view_layer.name
+                elif elem == "[User]":
+                    elem = os.getlogin()
                 elif elem == "[Custom A]":
-                    elem = scene.setoutputpath_props.output_customfield_a_prop
+                    elem = scene.setoutputpath_props.output_customfield_a
                 elif elem == "[Custom B]":
-                    elem = scene.setoutputpath_props.output_customfield_b_prop
+                    elem = scene.setoutputpath_props.output_customfield_b
                 elif elem == "[Custom C]":
-                    elem = scene.setoutputpath_props.output_customfield_c_prop
+                    elem = scene.setoutputpath_props.output_customfield_c
+                elif elem == "[Custom D]":
+                    elem = scene.setoutputpath_props.output_customfield_d
                 elif elem == "[File Version]":
                     if 'Snapshots_History' in bpy.data.texts.keys():
                         snap_history = bpy.data.texts['Snapshots_History'].lines[0].body
@@ -303,8 +308,8 @@ class RENDER_OT_setoutputpath(bpy.types.Operator):
             clean_filepath = complete_filepath.replace("\\\\", "\\").replace("\\//", "\\").replace("////", "//")
             print(f"{clean_filepath=}")
             # translate filepath regarding what user needs
-            if scene.setoutputpath_props.output_corresponding_prop != "":
-                corresponding_list = scene.setoutputpath_props.output_corresponding_prop.split(',')
+            if scene.setoutputpath_props.output_corresponding != "":
+                corresponding_list = scene.setoutputpath_props.output_corresponding.split(',')
                 corresponding_dict = {}
                 for corres in corresponding_list:
                     corres = corres.replace(" ","")
@@ -320,10 +325,10 @@ class RENDER_OT_setoutputpath(bpy.types.Operator):
             scene.render.filepath = clean_filepath
 
             # use a user script if wanted
-            if scene.setoutputpath_props.output_postscript_checkbox_prop:
-                if scene.setoutputpath_props.output_postscript_prop != None: 
-                    exec(scene.setoutputpath_props.output_postscript_prop.as_string())
-                    print(f"script {scene.setoutputpath_props.output_postscript_prop.name} launched")
+            if scene.setoutputpath_props.output_postscript_checkbox:
+                if scene.setoutputpath_props.output_postscript != None: 
+                    exec(scene.setoutputpath_props.output_postscript.as_string())
+                    print(f"script {scene.setoutputpath_props.output_postscript.name} launched")
 
         print(f"\n {separator} Set Output Path Finished {separator} \n")
         return {"FINISHED"}
