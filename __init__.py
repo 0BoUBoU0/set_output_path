@@ -7,7 +7,7 @@ bl_info = {
     "warning": "",
     "category": "Render",
     "blender": (2, 90, 0),
-    "version": (2,1,22)
+    "version": (2,1,23)
 }
 
 
@@ -75,7 +75,7 @@ class RENDER_setoutputpathprop(bpy.types.PropertyGroup):
     output_postscript_checkbox : bpy.props.BoolProperty (name="", default=False, description='if on, will launch a script after changing the render path')
 
     output_custom_filepath: bpy.props.StringProperty(default="Output", name="Output Folder", description='Output folder filepath, the root where everything starts')
-    output_path_previs: bpy.props.StringProperty(default="[Output Folder]**\\", name="Path previs", description='')
+    output_path_previs: bpy.props.StringProperty(default="[Output Folder]**/", name="Path previs", description='')
     output_corresponding : bpy.props.StringProperty(name="Translation",default="",description='translate field a to field b, separated by ",". I.E. "Image=rgba,Alpha=alpha" makes Images_Alpha becomes rgba_alpha')
 
     filepath_options = [("Absolute", "Absolute", "Absolute"), ("Relative", "Relative", "Relative")]
@@ -126,15 +126,15 @@ class RENDER_PT_setoutputpath(bpy.types.Panel):
                 iter += 1
         # create buttons
         char_options_A = [
-            ("[File Name]"," ", "insert File Name","FILE_BLEND"),
-            ("[Scene Name]"," ", "insert Scene Name","SCENE_DATA"),
-            ("[File Version]"," ", "insert File Version (need addon called snapshot files)","LINENUMBERS_ON"),
-            ("[User]"," ","insert user's name","USER"),
+            ("[File Name]","", "insert File Name","FILE_BLEND"),
+            ("[Scene Name]","", "insert Scene Name","SCENE_DATA"),
+            ("[File Version]","", "insert File Version (need addon called snapshot files)","LINENUMBERS_ON"),
+            ("[User]","","insert user's name","USER"),
             
-            ("[Camera Name]"," ", "insert Camera Name","CAMERA_DATA"),
-            ("[Layer Name]"," ", "insert Layer Name","RENDERLAYERS"),
+            ("[Camera Name]","", "insert Camera Name","CAMERA_DATA"),
+            ("[Layer Name]","", "insert Layer Name","RENDERLAYERS"),
             
-            ("[Output Folder]"," ", "insert Output Folder","FILE_FOLDER"), 
+            ("[Output Folder]","", "insert Output Folder","FILE_FOLDER"), 
         ]
         ui_blocs(char_options_A)
 
@@ -142,11 +142,12 @@ class RENDER_PT_setoutputpath(bpy.types.Panel):
 
         # separators
         char_options_B = [
-            ("\\", "\\","insert backslash", "NONE"),
+            
             ("/", "/","insert slash", "NONE"),
             ("_", "_","insert underscore","NONE"),
             ("-", "-","insert dash","NONE"),
             (".", ".","insert dot","NONE"),
+            #("\\", "\\","insert backslash", "NONE"),
         ]
         ui_blocs(char_options_B)
 
@@ -307,7 +308,7 @@ class RENDER_OT_setoutputpath(bpy.types.Operator):
 
                 complete_filepath += elem
             # clean the filepath
-            clean_filepath = complete_filepath.replace("\\\\", "\\").replace("\\//", "\\").replace("////", "//")
+            clean_filepath = complete_filepath.replace("\\\\", "\\").replace("\\//", "//").replace("////", "//")
             print(f"{clean_filepath=}")
             # translate filepath regarding what user needs
             if scene.setoutputpath_props.output_corresponding != "":
