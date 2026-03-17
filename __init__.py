@@ -7,7 +7,7 @@ bl_info = {
     "warning": "",
     "category": "Render",
     "blender": (2, 90, 0),
-    "version": (2,1,21)
+    "version": (2,1,22)
 }
 
 
@@ -126,13 +126,15 @@ class RENDER_PT_setoutputpath(bpy.types.Panel):
                 iter += 1
         # create buttons
         char_options_A = [
-            ("[Output Folder]"," ", "insert Output Folder","FILE_FOLDER"), 
-            ("[Scene Name]"," ", "insert Scene Name","SCENE_DATA"),
             ("[File Name]"," ", "insert File Name","FILE_BLEND"),
-            ("[Camera Name]"," ", "insert Camera Name","CAMERA_DATA"),
-            ("[Layer Name]"," ", "insert Layer Name","RENDERLAYERS"),
+            ("[Scene Name]"," ", "insert Scene Name","SCENE_DATA"),
             ("[File Version]"," ", "insert File Version (need addon called snapshot files)","LINENUMBERS_ON"),
             ("[User]"," ","insert user's name","USER"),
+            
+            ("[Camera Name]"," ", "insert Camera Name","CAMERA_DATA"),
+            ("[Layer Name]"," ", "insert Layer Name","RENDERLAYERS"),
+            
+            ("[Output Folder]"," ", "insert Output Folder","FILE_FOLDER"), 
         ]
         ui_blocs(char_options_A)
 
