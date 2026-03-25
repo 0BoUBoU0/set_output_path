@@ -7,7 +7,7 @@ bl_info = {
     "warning": "",
     "category": "Render",
     "blender": (2, 90, 0),
-    "version": (2,1,23)
+    "version": (2,1,3)
 }
 
 
@@ -291,7 +291,9 @@ class RENDER_OT_setoutputpath(bpy.types.Operator):
                 elif elem == "[Custom D]":
                     elem = scene.setoutputpath_props.output_customfield_d
                 elif elem == "[File Version]":
-                    if 'Snapshots_History' in bpy.data.texts.keys():
+                    if hasattr(bpy.context.scene, "sop_props"):
+                        file_version = getattr(bpy.context.scene.sop_props, "file_version")
+                    elif 'Snapshots_History' in bpy.data.texts.keys(): # if older version of snapshot file
                         snap_history = bpy.data.texts['Snapshots_History'].lines[0].body
                         file_version = snap_history.replace("--", "").split(":")[-1].strip()
                     else:
