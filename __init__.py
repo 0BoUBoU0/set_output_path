@@ -1,13 +1,13 @@
 bl_info = {
     "name": "Set Output Path",
-    "author": "Yannick 'BoUBoU' Castaing",
+    "author": "Yannick -BoUBoU- Castaing",
     "description": "This addon will set your render output in the same location where your file is.",
     "location": "PROPERTIES > RENDER PANEL > OUTPUT PANEL",
     "doc_url": "",
     "warning": "",
     "category": "Render",
     "blender": (2, 90, 0),
-    "version": (2,1,3)
+    "version": (2,1,31)
 }
 
 
@@ -291,8 +291,8 @@ class RENDER_OT_setoutputpath(bpy.types.Operator):
                 elif elem == "[Custom D]":
                     elem = scene.setoutputpath_props.output_customfield_d
                 elif elem == "[File Version]":
-                    if hasattr(bpy.context.scene, "sop_props"):
-                        file_version = getattr(bpy.context.scene.sop_props, "file_version")
+                    if hasattr(bpy.context.scene, "snapshotfiles_props"):
+                        file_version = getattr(bpy.context.scene.snapshotfiles_props, "file_version")
                     elif 'Snapshots_History' in bpy.data.texts.keys(): # if older version of snapshot file
                         snap_history = bpy.data.texts['Snapshots_History'].lines[0].body
                         file_version = snap_history.replace("--", "").split(":")[-1].strip()
